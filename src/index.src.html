@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en" data-theme="phosphor">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>BETA — own the beta of every runner</title>
+<meta name="description" content="When a coin breaks out, the money moves to its betas next. BETA maps every beta in seconds and takes the three strongest first.">
+<meta name="theme-color" content="#050806">
+<meta property="og:title" content="BETA — own the beta of every runner"><meta property="og:description" content="Every runner's second wave, mapped and bought first.">
+<meta property="og:type" content="website"><meta property="og:image" content="/og.png">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="/og.png">
+<link rel="icon" href="/fav.png"><link rel="apple-touch-icon" href="/fav.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+<style>
+/* ---- beta: map tool, tables, ledger ---- */
+.mapin{display:flex;align-items:center;gap:12px;padding:10px 10px 10px 16px;margin-top:34px}
+.mapin label{font-size:13px;white-space:nowrap;color:var(--muted)}
+.mapin input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--ink);font:500 15px var(--mono);caret-color:var(--accent)}
+.mapin input::placeholder{color:var(--faint)}
+.picks{display:flex;flex-wrap:wrap;align-items:center;gap:6px 6px;margin-top:12px;font-size:12px}
+.picks>span:first-child{width:8.5em}
+.picks .chip{border-color:var(--hair)}
+.picks .chip.new{border-color:var(--accent);color:var(--accent)}
+.maprow{display:grid;grid-template-columns:1.08fr .92fr;gap:22px;margin-top:28px;align-items:start}
+.mapcard{padding:0;position:relative;overflow:hidden}
+.mapcard canvas{display:block;width:100%;aspect-ratio:1}
+.mapcard .corner{position:absolute;left:14px;top:12px;right:14px;display:flex;justify-content:space-between;font-size:11px;color:var(--muted);pointer-events:none}
+.mapcard .legend{position:absolute;left:14px;bottom:12px;right:14px;display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11px;color:var(--muted);pointer-events:none}
+.legend i{display:inline-block;width:8px;height:8px;margin-right:6px;vertical-align:0}
+.mapside{display:grid;gap:22px}
+.hd{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.rsym{font-size:30px;font-weight:500;letter-spacing:-.02em;line-height:1.1;word-break:break-all}
+.rname{color:var(--muted);font-size:13px}
+.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;font-size:14px}
+.kv span{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.dev{font-size:12px;color:var(--muted);margin-top:14px;padding-top:12px;border-top:1px dashed var(--hair)}
+.dev a{text-decoration:none} .dev a:hover{color:var(--accent)}
+.leg{display:grid;grid-template-columns:1.8em 1fr auto;gap:10px;align-items:baseline;padding:9px 0;border-bottom:1px dashed var(--hair);font-size:13px}
+.leg .sc{display:block;color:var(--muted);font-size:11px}
+.leg a{text-decoration:none}
+.pnl{font-weight:500;text-align:right;min-width:5em}
+.up{color:var(--accent);text-shadow:var(--glow)} .dn{color:var(--red)}
+.tot{display:flex;justify-content:space-between;padding-top:12px;font-size:13px}
+.rules{font-size:11px;color:var(--faint);margin-top:10px;line-height:1.7}
+.tablecard{margin-top:22px;padding:4px 0 0;overflow-x:auto}
+table.bt{width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap}
+.bt th{font-weight:400;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);text-align:left;padding:10px 12px;border-bottom:1.5px solid var(--line)}
+.bt td{padding:8px 12px;border-bottom:1px dashed var(--hair)}
+.bt tr:last-child td{border-bottom:0}
+.bt tr.pick td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.bt .n{text-align:right}
+.bt a{color:var(--muted);text-decoration:none} .bt a:hover{color:var(--accent)}
+.bt .nm{color:var(--muted);max-width:12em;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:bottom}
+.lane{display:inline-block;font-size:10px;line-height:1.5;padding:0 .45em;margin-right:3px;border:1px solid var(--accent);color:var(--accent)}
+.lane.dim{border-color:var(--hair);color:var(--muted)}
+.mapfoot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px;font-size:12px}
+.mapfoot .sp{flex:1}
+.note{font-size:12px;color:var(--muted);border:1px dashed var(--hair);padding:10px 12px;margin-top:14px}
+.empty{color:var(--faint);font-size:12.5px;padding:18px 12px}
+.stats{margin-top:34px}
+.stat .v small{font-size:13px;color:var(--muted);font-weight:400;margin-left:.3em}
+.livegrid{display:grid;grid-template-columns:1fr;gap:22px;margin-top:22px}
+.loop{line-height:2;font-size:13px;white-space:pre;overflow-x:auto}
+.grid>*,.maprow>*,.mapside>*{min-width:0}
+#mini div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ok{color:var(--accent);text-shadow:var(--glow)}
+@media (max-width:860px){
+  .maprow{grid-template-columns:1fr} .mapin{flex-wrap:wrap} .mapin label{width:100%} .mapin input{font-size:16px}
+  .bt .hm,.bt .hmm,.bt .nm{display:none} .bt td,.bt th{padding:8px 6px} .bt th{letter-spacing:.04em} .bt .lane{margin-right:2px} .bt .lane.dim{display:none} table.bt{font-size:12px} .kv{grid-template-columns:1fr 1fr} .picks>span:first-child{width:100%}
+  .stats.g4{grid-template-columns:1fr 1fr} .loop{font-size:11px}
+  .hero-vis{height:auto;padding-top:262px} .hero-vis .term{position:relative;right:auto;bottom:auto;width:100%}
+  .log{font-size:11.5px;line-height:1.75} .log div{grid-template-columns:54px 42px 1fr;gap:8px;padding:2px 0}
+}
+</style>
+</head>
+<body>
+<canvas id="bgtape"></canvas>
+
+<header class="top" id="top"><div class="wrap">
+  <a class="brand" href="#hero"><canvas id="logo"></canvas>beta</a>
+  <nav class="nav"><a href="#how">how</a><a href="#map">map</a><a href="#live">live</a><a href="#fees">fees</a><a href="#token">token</a><a href="#faq">faq</a></nav>
+  <a class="btn" id="buyTop" href="#token">buy</a>
+</div></header>
+
+<section class="hero" id="hero">
+  <canvas class="hero-bg" id="heroBg" style="position:absolute;inset:0;width:100%;height:100%;z-index:0"></canvas>
+  <div class="wrap">
+    <div>
+      <div class="prompt"><span>anon@beta-desk ~ %</span> <span class="cmd" id="typed"></span><span class="cur"></span></div>
+      <h1>own the beta of every <b>runner.</b></h1>
+      <p class="lede">When a coin breaks out, the money moves to its copies next. BETA maps every beta in seconds and takes the three strongest before the wave lands. Profit buys back $BETA.</p>
+      <div class="ctas"><a class="btn pri" href="#map">map a runner →</a><a class="btn" href="#how">how it works</a></div>
+      <div class="ca"><span>ca</span><code id="ca">posted here and on X at launch</code><button class="chip" id="copy" hidden>copy</button></div>
+    </div>
+    <div class="hero-vis" id="heroVis">
+      <div class="term"><div class="bar"><i></i><i></i><i></i><span>beta watch --live</span></div>
+        <div class="body" id="mini"></div></div>
+    </div>
+  </div>
+</section>
+
+<div class="strip"><div class="run" id="strip"></div></div>
+
+<section class="s pin" id="how"><div class="stick"><div class="wrap">
+  <div class="eyebrow"><b>01</b> · how it works <i></i></div>
+  <h2><span class="pr">%</span>beta watch</h2>
+  <p class="lede">One loop on every breakout. Five steps, in order, in seconds.</p>
+  <div class="steps">
+    <ol class="steplist" id="steplist">
+      <li><b>01</b>a coin breaks out: it graduates off the curve</li>
+      <li><b>02</b>beta maps every copy: meme, ticker, theme, look, dev</li>
+      <li><b>03</b>each beta gets a score: relation × flow × headroom</li>
+      <li><b>04</b>the top 3 are bought before the wave lands</li>
+      <li><b>05</b>profit buys back $BETA</li>
+    </ol>
+    <div class="term"><div class="bar"><i></i><i></i><i></i><span>example run</span></div>
+      <div class="body" id="stepterm">
+        <div class="ln"><span class="mut">anon@beta-desk ~ %</span> beta watch --live</div>
+        <div class="ln"><span class="ok">✓</span> breakout · $RUNNER graduated · <span class="mut">t+0.0s</span></div>
+        <div class="ln"><span class="ok">✓</span> mapped 41 betas · 5 lanes · <span class="mut">t+1.8s</span></div>
+        <div class="ln"><span class="ok">✓</span> scored · relation × flow × headroom · <span class="mut">t+2.1s</span></div>
+        <div class="ln"><span class="ok">✓</span> basket · $BABYRUNNER $RUNNERCEO $RUNNER2</div>
+        <div class="ln"><span class="ok">✓</span> exit → profit buys back <span class="acc">$BETA</span></div>
+      </div></div>
+  </div>
+  <div class="meter">step <span id="stepn">0</span> / 5</div>
+</div></div></section>
+
+<section class="s" id="map"><div class="wrap">
+  <div class="eyebrow"><b>02</b> · beta map <i></i></div>
+  <h2><span class="pr">%</span>beta map &lt;runner&gt;</h2>
+  <p class="lede">Paste any runner. BETA finds every coin riding its wave and ranks them. Live pump.fun and DexScreener data, no wallet, no keys. <span class="lamp" id="mapLamp">idle</span></p>
+  <form class="term mapin" id="mapForm" autocomplete="off">
+    <label for="q">anon@beta-desk ~ % beta map</label>
+    <input id="q" spellcheck="false" placeholder="paste a ca or $ticker">
+    <button class="btn pri" type="submit">map →</button>
+  </form>
+  <div class="picks"><span class="mut"># breakouts</span><span id="pickLive" class="mut">waiting for the next graduation…</span></div>
+  <div class="picks"><span class="mut"># examples</span><button class="chip" data-q="fartcoin">$fartcoin</button><button class="chip" data-q="wif">$wif</button><button class="chip" data-q="popcat">$popcat</button><button class="chip" data-q="goat">$goat</button></div>
+  <div class="maprow">
+    <div class="card mapcard"><canvas id="mapc"></canvas>
+      <div class="corner"><span id="mapCorner"># map</span><span id="mapCount"></span></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>basket</span><span><i style="background:var(--ink)"></i>close beta</span><span><i style="background:var(--muted)"></i>theme beta</span><span><i style="border:1.5px solid var(--muted)"></i>fresh, not on dex yet</span></div>
+    </div>
+    <div class="mapside">
+      <div class="card" id="runnerCard"><div class="hd"><span># runner</span></div><div class="empty">pick a breakout above or paste a runner.</div></div>
+      <div class="card" id="basketCard"><div class="hd"><span># basket · sim</span></div><div class="empty">the three strongest betas land here.</div></div>
+    </div>
+  </div>
+  <div class="card tablecard"><table class="bt" id="betaTable"><tbody><tr><td class="empty">every beta, ranked, lands here.</td></tr></tbody></table></div>
+  <div class="mapfoot"><span id="mapStatus" class="mut"></span><span class="sp"></span><button class="btn" id="dlCard" disabled>save card</button><a class="btn" id="xShare" href="#map" target="_blank" rel="noopener" hidden>post on x</a></div>
+  <div class="note" id="mapNote" hidden></div>
+</div></section>
+
+<section class="s" id="live"><div class="wrap">
+  <div class="eyebrow"><b>03</b> · live <i></i></div>
+  <h2><span class="pr">%</span>tail -f breakouts.log</h2>
+  <p class="lede">Every graduation on pump.fun, mapped the second it lands. New launches that copy a recent runner are flagged as betas spawning. <span class="lamp" id="lamp">connecting</span></p>
+  <div class="grid g4 stats">
+    <div class="card stat"><div class="k">launches seen</div><div class="v" id="stCreates">0</div></div>
+    <div class="card stat"><div class="k">breakouts</div><div class="v acc" id="stGrads">0</div></div>
+    <div class="card stat"><div class="k">betas spawned</div><div class="v" id="stSpawn">0</div></div>
+    <div class="card stat"><div class="k">baskets · sim</div><div class="v" id="stBaskets">0</div></div>
+  </div>
+  <div class="livegrid">
+    <div class="card"><div class="log" id="log"></div></div>
+    <div class="card tablecard" style="margin-top:0"><div class="hd" style="padding:10px 12px 0"><span># session ledger · paper fills at real prices</span><span id="ledgerSum"></span></div>
+      <table class="bt" id="ledger"><tbody><tr><td class="empty">baskets open here as breakouts land.</td></tr></tbody></table></div>
+  </div>
+</div></section>
+
+<section class="s" id="fees"><div class="wrap">
+  <div class="eyebrow"><b>04</b> · where the fees go <i></i></div>
+  <h2><span class="pr">%</span>beta fees --split</h2>
+  <p class="lede">Creator fees fund the vault and the buyback. Every :.00 splits the same way.</p>
+  <div class="split"><div style="flex:50;--c:var(--accent)"></div><div style="flex:40;--c:var(--ink)"></div><div style="flex:10;--c:var(--faint)"></div></div>
+  <div class="rows">
+    <div><b class="acc">:.50</b>beta vault · the bankroll for the top-3 buys on every breakout</div>
+    <div><b>:.40</b>buyback $BETA · straight from fees</div>
+    <div><b class="mut">:.10</b>engine · the servers that keep the map fast</div>
+    <div><b class="acc">100%</b>of vault profit buys back $BETA. losses stay in the vault.</div>
+  </div>
+  <div class="grid g4" style="margin-top:40px">
+    <div class="card lift stat"><div class="k">lanes</div><div class="v">5</div></div>
+    <div class="card lift stat"><div class="k">basket</div><div class="v">3<small>betas</small></div></div>
+    <div class="card lift stat"><div class="k">last map</div><div class="v acc" id="stLast">—</div></div>
+    <div class="card lift stat"><div class="k">api keys</div><div class="v">0</div></div>
+  </div>
+</div></section>
+
+<section class="s" id="token"><div class="wrap">
+  <div class="eyebrow"><b>05</b> · token <i></i></div>
+  <h2><span class="pr">%</span>beta token</h2>
+  <div class="grid g2" style="margin-top:34px;align-items:start">
+    <div class="card"><div class="rows">
+      <div><span class="mut" style="width:9em;flex:none">ticker</span>$BETA</div>
+      <div><span class="mut" style="width:9em;flex:none">chain</span>solana · pump.fun</div>
+      <div><span class="mut" style="width:9em;flex:none">supply</span>1,000,000,000</div>
+      <div><span class="mut" style="width:9em;flex:none">fees</span>vault + buyback</div>
+      <div><span class="mut" style="width:9em;flex:none">vault profit</span>100% buyback $BETA</div></div>
+      <div class="ctas"><a class="btn pri" id="buy" href="#token">ca posted at launch</a><a class="btn" id="xlink" href="#" target="_blank" rel="noopener" hidden>follow on X</a></div></div>
+    <div class="term"><div class="bar"><i></i><i></i><i></i><span>the loop</span></div>
+      <div class="body loop">a runner breaks out
+└─ the vault buys its 3 strongest betas
+  └─ the betas run with the second wave
+    └─ profit buys back <span class="acc">$BETA</span>
+      └─ holders own the beta of every runner</div></div>
+  </div>
+</div></section>
+
+<section class="s" id="faq"><div class="wrap">
+  <div class="eyebrow"><b>06</b> · faq <i></i></div>
+  <h2><span class="pr">%</span>man beta</h2>
+  <div class="man" style="margin-top:28px">
+    <details open><summary>is this financial advice?</summary><p>No. BETA shows which coins are riding a runner's wave and how it would trade them. It never tells you to buy anything, and it never will.</p></details>
+    <details><summary>what is a beta?</summary><p>A coin that moves with a runner: the same name or ticker, the same theme, the same image style or the same dev wallet. When the runner breaks out, the money that missed it goes there next.</p></details>
+    <details><summary>what counts as a breakout?</summary><p>A coin graduating off the pump.fun bonding curve. BETA listens to the pump.fun stream and starts mapping the second the graduation lands.</p></details>
+    <details><summary>how are the three picked?</summary><p>Every beta gets a score from three things: how closely it's related to the runner, how much money is flowing into it right now, and how much headroom it has below the runner's market cap. Coins too new, too thin or already bigger than the runner are skipped.</p></details>
+    <details><summary>are the buys real?</summary><p>Not yet. The breakouts, the beta map and the prices are live pump.fun and DexScreener data. The vault's buys are paper fills at real prices while the engine is in beta, and every basket on this page is marked sim.</p></details>
+    <details><summary>what can't it do?</summary><p>Betas are copies. Many rug and most fade with the runner. A high score means related and moving, not safe. The dev lane only sees coins launched while the page is open, and the look lane needs both coins to have an image.</p></details>
+    <details><summary>will beta DM me?</summary><p>Never. Anyone who does is not us.</p></details>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="big">own the <b>beta.</b><span class="cur"></span></div>
+  <div class="ctas"><a class="btn pri" href="#map">map a runner</a></div>
+  <div class="fine"><span>$BETA · solana</span><span>not financial advice</span><span>sim fills are marked sim</span><span id="cafoot"></span></div>
+</div></footer>
+
+<script src="termkit.js"></script>
+<script>
+const CONFIG = { ca:"", x:"", dexscreener:"", site:"", ticker:"$BETA", object:"beta", theme:document.documentElement.dataset.theme };
+const T = TK.THEMES[CONFIG.theme];
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"]/g, m => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[m]));
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const now = () => Date.now(), sleep = ms => new Promise(r => setTimeout(r, ms));
+const hhmmss = (t = now()) => new Date(t).toTimeString().slice(0, 8);
+const short = a => a ? a.slice(0, 4) + "…" + a.slice(-4) : "";
+const tag = s => "$" + esc(String(s || "?").slice(0, 14));
+const usd = v => { if (v == null || !isFinite(v)) return "—"; const a = Math.abs(v);
+  return "$" + (a >= 1e9 ? (v / 1e9).toFixed(2) + "b" : a >= 1e6 ? (v / 1e6).toFixed(2) + "m" : a >= 1e3 ? (v / 1e3).toFixed(1) + "k" : v.toFixed(0)); };
+const sub = n => String(n).replace(/\d/g, d => "₀₁₂₃₄₅₆₇₈₉"[d]);
+const price = v => { if (!v || !isFinite(v)) return "—"; if (v >= 1) return "$" + v.toFixed(3); const z = Math.floor(-Math.log10(v));
+  return z >= 3 ? "$0.0" + sub(z) + Math.round(v * 10 ** (z + 3)) : "$" + v.toFixed(z + 3); };
+const pct = (v, raw) => { if (v == null || !isFinite(v)) return "—"; const x = raw ? v : v * 100; return (x >= 0 ? "+" : "") + x.toFixed(Math.abs(x) >= 100 ? 0 : 1) + "%"; };
+const fx = g => g == null || !isFinite(g) ? "—" : (g >= 1000 ? (g / 1000).toFixed(g >= 1e4 ? 0 : 1) + "k" : g.toFixed(g >= 100 ? 0 : 1)) + "×";
+const updn = v => v > 0 ? "up" : v < 0 ? "dn" : "mut";
+const ago = ms => { const s = Math.max(0, ms / 1000); return s < 60 ? Math.round(s) + "s" : s < 3600 ? Math.round(s / 60) + "m" : s < 86400 ? Math.round(s / 3600) + "h" : s < 31536e3 ? Math.round(s / 86400) + "d" : (s / 31536e3).toFixed(1) + "y"; };
+const hashStr = s => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const lev = (a, b) => { const d = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) { let p = d[0]; d[0] = i; for (let j = 1; j <= b.length; j++) { const t = d[j]; d[j] = Math.min(d[j] + 1, d[j - 1] + 1, p + (a[i - 1] === b[j - 1] ? 0 : 1)); p = t; } } return d[b.length]; };
+
+// ---------- CA, buy, X ----------
+if (CONFIG.ca) { $("#ca").textContent = CONFIG.ca; $("#copy").hidden = false; $("#cafoot").textContent = "ca " + CONFIG.ca;
+  $("#copy").onclick = () => navigator.clipboard.writeText(CONFIG.ca).then(() => $("#copy").textContent = "copied");
+  ["#buy", "#buyTop"].forEach(s => { $(s).href = "https://pump.fun/coin/" + CONFIG.ca; $(s).target = "_blank"; $(s).rel = "noopener"; }); $("#buy").textContent = "buy on pump.fun"; }
+if (CONFIG.x) { $("#xlink").href = CONFIG.x; $("#xlink").hidden = false; }
+if (!CONFIG.ca) { const b = $("#buy"); b.removeAttribute("href"); b.classList.remove("pri"); b.style.cssText = "pointer-events:none;opacity:.6;box-shadow:none"; }
+
+// ---------- logo + hero object (same pixel object as the graphics) ----------
+{ const g = TK.OBJECTS[CONFIG.object]({ ticker: CONFIG.ticker }), c = $("#logo"), k = 2;
+  c.width = g.w * k; c.height = g.h * k; const x = c.getContext("2d"); TK.draw(x, g, { theme: T, cell: k, x: 0, y: 0, shadow: false });
+  c.style.width = Math.round(26 * g.w / g.h) + "px"; }
+function drawHero() {
+  const hero = $("#hero"), c = $("#heroBg"), d = devicePixelRatio || 1, r = hero.getBoundingClientRect(), a = $("#heroVis").getBoundingClientRect();
+  c.width = r.width * d; c.height = r.height * d; const x = c.getContext("2d"); x.scale(d, d); x.imageSmoothingEnabled = false;
+  const g = TK.OBJECTS[CONFIG.object]({ ticker: CONFIG.ticker });
+  const small = matchMedia("(max-width:860px)").matches, boxH = small ? 250 : a.height;      // on phones the terminal sits under the object
+  const cell = Math.max(3, Math.floor(Math.min(a.width * .86 / g.w, boxH * (small ? .86 : .78) / g.h)));
+  const ox = a.left - r.left + (a.width - g.w * cell) * (small ? .28 : .2), oy = a.top - r.top + (boxH - g.h * cell) * (small ? .35 : 0);
+  TK.draw(x, g, { theme: T, cell, x: ox, y: oy, shadowLen: 1600 });
+}
+drawHero(); addEventListener("resize", drawHero); document.fonts.ready.then(drawHero);
+function drawBg() { const c = $("#bgtape"), d = devicePixelRatio || 1; c.width = innerWidth * d; c.height = 140 * d;
+  const x = c.getContext("2d"); x.scale(d, d); x.fillStyle = T.muted; let y = 70, s = 7;
+  for (let i = 0; i < innerWidth; i += 4) { s = s * 16807 % 2147483647; y += (s / 2147483647 - .5) * 6 + (70 - y) * .02; x.globalAlpha = .45; x.fillRect(i, y, 2, 2); } }
+drawBg(); addEventListener("resize", drawBg);
+{ const cmd = "beta watch --live", el = $("#typed"); if (reduce) el.textContent = cmd;
+  else { let i = 0; const t = setInterval(() => { el.textContent = cmd.slice(0, ++i); if (i >= cmd.length) clearInterval(t); }, 70); } }
+
+// ---------- words, themes, lanes ----------
+const STOP = new Set("the of and coin token official sol solana on in to for by is it my your our this that with new real just only".split(" "));
+const GROUPS = ["dog doge inu pup puppy shiba shib wif", "cat kitty kitten meow neko popcat", "frog pepe kek toad ribbit", "agent gpt neural llm robot",
+  "trump maga donald", "elon musk", "moon lunar", "penguin pengu pingu", "monkey ape chimp gorilla monke", "goat", "fart", "squirrel pnut",
+  "hippo", "bear", "bull", "shark whale", "chill", "pig hog", "duck", "rat mouse", "panda", "fox", "owl"].map(s => s.split(" "));
+const compact = s => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const words = s => String(s || "").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(w => w.length >= 3 && !STOP.has(w));
+function themesOf(name, sym) { const toks = [...words(name), compact(sym)].filter(Boolean), out = new Set();
+  GROUPS.forEach((g, i) => { if (toks.some(t => g.some(w => w.length >= 4 ? t.includes(w) : t === w || t.startsWith(w) || t.endsWith(w)))) out.add(i); }); return out; }
+function enrich(t) { t.words = words(t.name); t.themes = themesOf(t.name, t.sym); return t; }
+const BLOCK = new Set(["SOL", "WSOL", "USDC", "USDT", "JUP", "RAY", "JTO", "PYTH", "MSOL", "JITOSOL"]);
+
+function lanesFor(r, b) {
+  if (b.Lfix) return b.Lfix;
+  const L = { meme: 0, ticker: 0, theme: 0, look: 0, dev: 0 }, rs = r.sym, bs = b.sym;
+  if (rs && bs) { if (bs === rs) L.ticker = 1;
+    else if (rs.length >= 3 && (bs.includes(rs) || (bs.length >= 3 && rs.includes(bs)))) L.ticker = .85;
+    else if (rs.length >= 4 && lev(rs, bs) <= 1) L.ticker = .7; }
+  const rc = compact(r.name), bc = compact(b.name);
+  if (rc.length >= 4 && (bc.includes(rc) || (bc.length >= 4 && rc.includes(bc)))) L.meme = 1;
+  else if (r.words.length) { const bw = b.words, hit = r.words.filter(w => bw.some(x => x === w || (w.length >= 4 && x.includes(w)))).length;
+    if (hit) L.meme = Math.min(.9, .45 + .45 * hit / r.words.length); }
+  if (!L.meme && rs.length >= 3 && bc.includes(rs.toLowerCase())) L.meme = .6;
+  if ([...r.themes].some(t => b.themes.has(t))) L.theme = .6;
+  if (r.hash && b.hash) { const h = ham(r.hash, b.hash); if (h <= 12) L.look = h <= 5 ? 1 : 1 - (h - 5) / 10; }
+  if (r.dev && b.dev && r.dev === b.dev) L.dev = 1;
+  return L;
+}
+const relOf = L => clamp(.55 * Math.max(L.meme, L.ticker) + .15 * Math.min(L.meme, L.ticker) + .22 * L.theme + .25 * L.look + .35 * L.dev);
+
+// ---------- image look-alike: 64-bit difference hash through a CORS image proxy ----------
+const ham = (a, b) => { let n = 0; for (let i = 0; i < 64; i++) if (a[i] !== b[i]) n++; return n; };
+function dhash(src) {
+  return new Promise(res => {
+    let done = false; const fin = v => { if (!done) { done = true; res(v); } };
+    const img = new Image(); img.crossOrigin = "anonymous";
+    img.onload = () => { try { const c = document.createElement("canvas"); c.width = 9; c.height = 8; const x = c.getContext("2d", { willReadFrequently: true });
+      x.drawImage(img, 0, 0, 9, 8); const d = x.getImageData(0, 0, 9, 8).data, lum = i => d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11; let bits = "";
+      for (let y = 0; y < 8; y++) for (let k = 0; k < 8; k++) { const i = (y * 9 + k) * 4; bits += lum(i) > lum(i + 4) ? "1" : "0"; }
+      const ones = bits.split("1").length - 1; fin(ones < 6 || ones > 58 ? null : bits); } catch { fin(null); } };
+    img.onerror = () => fin(null); setTimeout(() => fin(null), 3000);
+    img.src = "https://wsrv.nl/?url=" + encodeURIComponent(src) + "&w=36&h=32&fit=fill&output=png";
+  });
+}
+
+// ---------- DexScreener (free, no key) ----------
+const DS = "https://api.dexscreener.com";
+let dsOK = null;
+async function dsGet(path) { try { const r = await fetch(DS + path); if (!r.ok) throw new Error("dex " + r.status); const j = await r.json(); dsOK = true; return j; }
+  catch (e) { if (dsOK !== true) dsOK = false; throw e; } }
+const search = async q => ((await dsGet("/latest/dex/search?q=" + encodeURIComponent(q))).pairs || []).filter(p => p.chainId === "solana");
+async function tokens(mints) { const out = []; for (let i = 0; i < mints.length; i += 30) { const j = await dsGet("/tokens/v1/solana/" + mints.slice(i, i + 30).join(",")); if (Array.isArray(j)) out.push(...j); } return out; }
+const weight = p => (p.volume?.h24 || 0) + (p.liquidity?.usd || 0);
+function bestPairs(pairs) { const m = new Map(); for (const p of pairs) { const k = p.baseToken?.address; if (!k || p.chainId !== "solana") continue; const o = m.get(k); if (!o || weight(p) > weight(o)) m.set(k, p); } return m; }
+const fromPair = p => enrich({ mint: p.baseToken.address, sym: String(p.baseToken.symbol || "").toUpperCase(), name: p.baseToken.name || "", mcap: p.marketCap ?? p.fdv ?? null, price: +p.priceUsd || null,
+  v5: p.volume?.m5 || 0, v1: p.volume?.h1 || 0, v24: p.volume?.h24 || 0, b5: p.txns?.m5?.buys || 0, s5: p.txns?.m5?.sells || 0, c5: p.priceChange?.m5 ?? 0, c1: p.priceChange?.h1 ?? 0,
+  liq: p.liquidity?.usd ?? null, dex: p.dexId, born: p.pairCreatedAt || null, img: p.info?.imageUrl || null, url: p.url, src: "dex", dev: S.byMint.get(p.baseToken.address)?.dev });
+const fromStream = c => enrich({ mint: c.mint, sym: String(c.symbol || "").toUpperCase(), name: c.name || "", mcap: c.mcSol ? c.mcSol * S.sol : null, price: null,
+  v5: 0, v1: 0, v24: 0, b5: 0, s5: 0, c5: 0, c1: 0, liq: null, dex: "pumpfun", born: c.t, img: null, url: "https://pump.fun/coin/" + c.mint, src: "stream", dev: c.dev });
+
+// ---------- session state ----------
+const S = { creates: 0, grads: 0, spawned: 0, baskets: [], recent: [], byMint: new Map(), runners: [], live: false, preview: false, sol: 160, lastNew: 0, lastBreak: null, events: [] };
+async function solPrice() { try { const m = bestPairs(await tokens(["So11111111111111111111111111111111111111112"])); const p = m.get("So11111111111111111111111111111111111111112"); if (p?.priceUsd) S.sol = +p.priceUsd; } catch {} }
+solPrice(); setInterval(solPrice, 300e3);
+
+// ---------- the map engine ----------
+const isMint = s => /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s);
+async function resolve(q) {
+  q = q.trim().replace(/^\$/, "");
+  if (isMint(q)) { let p = null; try { p = bestPairs(await tokens([q])).get(q); } catch (e) { if (!S.byMint.has(q)) throw e; }
+    if (p) return fromPair(p); const c = S.byMint.get(q); if (c) return fromStream(c); throw new Error("nf"); }
+  const all = [...bestPairs(await search(q)).values()], U = q.toUpperCase();
+  const exact = all.filter(p => String(p.baseToken.symbol).toUpperCase() === U || String(p.baseToken.name).toUpperCase() === U);
+  const pick = (exact.length ? exact : all).sort((a, b) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0))[0];
+  if (!pick) throw new Error("nf"); return fromPair(pick);
+}
+async function gather(r) {
+  const theme = [...r.themes].map(i => GROUPS[i][0]);
+  const qs = [...new Set([r.sym, r.name, ...r.words.slice(0, 2), ...theme.slice(0, 1)].filter(q => q && q.length >= 2).map(q => q.toLowerCase()))].slice(0, 5);
+  const res = await Promise.allSettled(qs.map(search));
+  if (res.every(x => x.status === "rejected")) throw new Error("search");
+  const m = bestPairs(res.flatMap(x => x.value || [])); m.delete(r.mint);
+  const list = [...m.values()].map(fromPair);
+  for (const c of S.recent) if (c.mint !== r.mint && !m.has(c.mint)) { const b = fromStream(c), L = lanesFor(r, b); if (L.meme >= .6 || L.ticker >= .7 || L.dev) list.push(b); }
+  return { list, qs };
+}
+function score(r, list) {
+  const betas = []; let skipped = 0;
+  for (const b of list) {
+    if (BLOCK.has(b.sym) || b.mint === r.mint) continue;
+    const L = lanesFor(r, b), rel = relOf(L); if (rel < .1) continue;
+    if (b.src === "dex" && b.dex !== "pumpfun" && (b.liq ?? 0) < 500) continue;
+    const gap = r.mcap && b.mcap ? r.mcap / b.mcap : null;
+    if (gap != null && gap < .67) { skipped++; continue; }                       // bigger than the runner: an alpha, not a beta
+    const tx = b.b5 + b.s5;
+    const flow = b.src === "stream" ? .25 : clamp(Math.log10(b.v1 + 1) / 5.5) * .45 + (tx ? b.b5 / tx : .5) * .3 + clamp((b.c5 + 20) / 60) * .25;
+    const head = gap == null ? .3 : gap <= 1 ? 0 : clamp(Math.log10(gap) / 2.5);
+    const ok = b.src !== "stream" && !!b.price && gap > 1.5 && (b.mcap || 0) >= 4000 && (tx >= 2 || b.v1 >= 500) && (!b.born || now() - b.born > 60e3);
+    betas.push(Object.assign(b, { L, rel, flow, head, gap, ok, score: Math.round(100 * (.45 * rel + .35 * flow + .2 * head)) }));
+  }
+  betas.sort((a, b) => b.score - a.score);
+  return { betas, basket: betas.filter(b => b.ok).slice(0, 3), skipped };
+}
+async function lookPass(r, list, cap) { // hash the runner and the likeliest betas, capped in time
+  if (!r.img) return; const cand = [r, ...list.filter(b => b.img).sort((a, b) => b.v1 - a.v1).slice(0, 16)].filter(x => !x.hash);
+  await Promise.race([Promise.all(cand.map(async x => { x.hash = await dhash(x.img); })), sleep(cap)]);
+}
+async function mapRunner(q, cap = 2200) {
+  const t0 = performance.now(), r = await resolve(q);
+  const { list, qs } = await gather(r);
+  await lookPass(r, list, cap);
+  return { r, ...score(r, list), qs, ms: performance.now() - t0, t: now(), preview: false };
+}
+function watchRunner(r) { if (!S.runners.some(x => x.mint === r.mint)) { S.runners.unshift(Object.assign({ at: now(), spawned: 0 }, r)); S.runners.length = Math.min(S.runners.length, 30); } }
+
+// ---------- preview data (only when the live sources can't be reached) ----------
+function previewMap(q) {
+  const R = rng(hashStr(q.toLowerCase())), base = q.replace(/^\$/, "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "RUNNER";
+  const fake = () => Array.from({ length: 44 }, () => "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"[Math.floor(R() * 58)]).join("");
+  const r = enrich({ mint: fake(), sym: base, name: base.toLowerCase(), mcap: 1.4e6 + R() * 7e6, price: .001 + R() * .01, v1: 2e5 + R() * 9e5, c1: 30 + R() * 140, born: now() - (2 + R() * 20) * 3600e3, src: "preview", url: "" });
+  const pre = ["BABY", "MINI", "LIL", "GIGA", "SUPER", "DARK", "BASED", "REAL"], suf = ["2", "CEO", "INU", "CAT", "AI", "WIF", "DAO", "KING", "CLUB", "SOL"], themed = ["SEND", "WAVE", "RUN", "MOON", "TWIN", "ECHO"];
+  const list = Array.from({ length: 28 }, (_, i) => { const k = R(); let sym, L = { meme: 0, ticker: 0, theme: 0, look: 0, dev: 0 };
+    if (k < .32) { sym = pre[i % 8] + base; L.ticker = .85; L.meme = .6; } else if (k < .64) { sym = base + suf[i % 10]; L.ticker = .85; } else if (k < .68) { sym = base; L.ticker = 1; L.meme = 1; } else { sym = themed[i % 6] + (i % 3 ? "" : "X"); L.theme = .6; }
+    if (R() < .25) L.look = .6 + R() * .4; if (R() < .06) L.dev = 1;
+    const mcap = 6e3 + R() ** 2 * 6e5;
+    return enrich({ mint: fake(), sym, name: sym.toLowerCase(), mcap, price: mcap / 1e9, v5: R() * 9e3, v1: R() ** 1.5 * 9e4, b5: Math.floor(R() * 30), s5: Math.floor(R() * 18), c5: (R() - .3) * 60, c1: (R() - .3) * 200,
+      liq: mcap * .2, dex: "pumpfun", born: now() - R() * 3 * 3600e3, img: null, url: "", src: "preview", Lfix: L }); });
+  return { r, ...score(r, list), qs: [base.toLowerCase()], ms: 1400 + R() * 900, t: now(), preview: true };
+}
+
+// ---------- map drawing (pixel style, shared by the card and the share image) ----------
+function layout(cur, Sz) {
+  const c = Sz / 2, seed = (hashStr(cur.r.mint) % 360) * Math.PI / 180;
+  return cur.betas.slice(0, 42).map((b, i) => { const ring = b.rel >= .62 ? .17 : b.rel >= .3 ? .3 : .42, jit = ((hashStr(b.mint) % 100) / 100 - .5) * .06, d = Sz * (ring + jit), a = seed + i * 2.39996;
+    return { b, i, d, x: c + Math.cos(a) * d, y: c + Math.sin(a) * d, s: Math.max(4, Math.round(Sz * (.011 + .013 * clamp(Math.log10(b.v1 + 1) / 6)))) }; });
+}
+function drawMap(x, Sz, cur, prog = 1, bg = T.card) {
+  const c = Sz / 2, top = new Set(cur.basket.map(b => b.mint)), f = Math.max(10, Math.round(Sz * .021)), mono = `"JetBrains Mono", ui-monospace, monospace`;
+  x.fillStyle = bg; x.fillRect(0, 0, Sz, Sz);
+  x.fillStyle = T.line; for (let y = 10; y < Sz; y += 18) for (let k = 10; k < Sz; k += 18) x.fillRect(k, y, 1, 1);
+  [[.17, "clone"], [.3, "close"], [.42, "theme"]].forEach(([fr, lab]) => { const rr = Sz * fr; x.fillStyle = T.line;
+    for (let a = 0; a < Math.PI * 2; a += 5 / rr) x.fillRect(Math.round(c + Math.cos(a) * rr), Math.round(c + Math.sin(a) * rr), 2, 2);
+    x.fillStyle = T.faint || T.muted; x.font = `${f * .85}px ${mono}`; x.fillText(lab, c + 6, c - rr - 6); });
+  const scan = prog * Sz * .5, pts = layout(cur, Sz);
+  if (prog < 1) { x.fillStyle = T.accent; x.globalAlpha = .55; for (let a = 0; a < Math.PI * 2; a += 3 / Math.max(scan, 1)) x.fillRect(Math.round(c + Math.cos(a) * scan), Math.round(c + Math.sin(a) * scan), 2, 2); x.globalAlpha = 1; }
+  for (const p of pts) { if (p.d > scan) continue;
+    if (top.has(p.b.mint)) { x.strokeStyle = T.accent; x.lineWidth = 2; x.shadowColor = T.accent; x.shadowBlur = T.glowBlur ? 10 : 0; x.beginPath(); x.moveTo(c, c); x.lineTo(p.x, p.y); x.stroke(); x.shadowBlur = 0; }
+    else { x.fillStyle = T.line; const n = Math.floor(p.d / 6); for (let k = 2; k < n; k++) x.fillRect(Math.round(c + (p.x - c) * k / n), Math.round(c + (p.y - c) * k / n), 1.5, 1.5); } }
+  for (const p of pts) { if (p.d > scan) continue; const isTop = top.has(p.b.mint), s = isTop ? p.s + 4 : p.s, X = Math.round(p.x - s / 2), Y = Math.round(p.y - s / 2);
+    if (p.b.src === "stream") { x.strokeStyle = T.muted; x.lineWidth = 1.5; x.strokeRect(X + .75, Y + .75, s - 1.5, s - 1.5); }
+    else { x.fillStyle = isTop ? T.accent : p.b.rel >= .3 ? T.ink : T.muted; if (isTop && T.glowBlur) { x.shadowColor = T.accent; x.shadowBlur = 12; } x.fillRect(X, Y, s, s); x.shadowBlur = 0; }
+    if (isTop || p.i < 10) { const lab = "$" + p.b.sym.slice(0, 12); x.font = `${isTop ? 500 : 400} ${isTop ? f : f * .82}px ${mono}`; const tw = x.measureText(lab).width;
+      let right = p.x >= c; if (right && p.x + s / 2 + 8 + tw > Sz - 4) right = false; else if (!right && p.x - s / 2 - 8 - tw < 4) right = true; x.textAlign = right ? "left" : "right";
+      x.fillStyle = isTop ? T.ink : T.muted; x.fillText(lab, p.x + (right ? s / 2 + 6 : -s / 2 - 6), p.y + f * .35);
+      if (isTop) { x.fillStyle = T.accent; x.font = `${f * .8}px ${mono}`; x.fillText(String(p.b.score), p.x + (right ? s / 2 + 6 : -s / 2 - 6), p.y + f * 1.35); } x.textAlign = "left"; } }
+  const rs = Math.round(Sz * .05); x.fillStyle = T.ink; x.fillRect(c - rs / 2, c - rs / 2, rs, rs); x.fillStyle = T.card; x.fillRect(c - rs / 2 + 3, c - rs / 2 + 3, rs - 6, rs - 6);
+  x.fillStyle = T.accent; x.fillRect(c - rs / 2 + 6, c - rs / 2 + 6, rs - 12, rs - 12);
+  x.font = `600 ${f * 1.15}px ${mono}`; const rl = "$" + cur.r.sym.slice(0, 14), rw = x.measureText(rl).width; x.fillStyle = bg; x.fillRect(c - rw / 2 - 6, c + rs / 2 + f * .35, rw + 12, f * 1.55);
+  x.textAlign = "center"; x.fillStyle = T.ink; x.fillText(rl, c, c + rs / 2 + f * 1.5); x.textAlign = "left";
+}
+let anim = 0;
+function paintMap(cur, animate) {
+  const cv = $("#mapc"), d = devicePixelRatio || 1, w = cv.getBoundingClientRect().width; if (!w) return;
+  cv.width = w * d; cv.height = w * d; const x = cv.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  const id = ++anim, t0 = performance.now(), dur = animate && !reduce ? 1100 : 0;
+  const frame = t => { if (id !== anim) return; const p = dur ? clamp((t - t0) / dur) : 1; drawMap(x, w, cur, p); if (p < 1) requestAnimationFrame(frame); };
+  requestAnimationFrame(frame);
+}
+function idleMap() { const cv = $("#mapc"), d = devicePixelRatio || 1, w = cv.getBoundingClientRect().width; if (!w) return; cv.width = w * d; cv.height = w * d;
+  const x = cv.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0); drawMap(x, w, { r: { sym: "RUNNER", mint: "x" }, betas: [], basket: [] }, 1); }
+
+// ---------- rendering the tool ----------
+let current = null, mapSeq = 0, touched = false;
+function setMapLamp(txt, live) { const l = $("#mapLamp"); l.textContent = txt; l.classList.toggle("live", !!live); }
+const laneTags = L => [["clone", L.meme >= 1 && L.ticker >= 1], ["meme", L.meme > 0 && !(L.meme >= 1 && L.ticker >= 1)], ["ticker", L.ticker > 0 && !(L.meme >= 1 && L.ticker >= 1)], ["theme", L.theme > 0], ["look", L.look > 0], ["dev", L.dev > 0]]
+  .filter(x => x[1]).map(x => `<span class="lane${x[0] === "theme" ? " dim" : ""}">${x[0]}</span>`).join("");
+const laneNames = L => laneTags(L).replace(/<[^>]+>/g, " ").trim().split(/\s+/).join(" + ");
+const linkOf = b => b.url ? `<a href="${esc(b.url)}" target="_blank" rel="noopener">${b.src === "stream" ? "pump" : "dex"} ↗</a>` : `<span class="mut">sim</span>`;
+function renderTool(cur, animate) {
+  const { r } = cur, pv = cur.preview;
+  $("#mapCorner").textContent = "# betas of $" + r.sym.slice(0, 14);
+  $("#mapCount").textContent = cur.betas.length + " mapped";
+  paintMap(cur, animate);
+  const dev = r.dev ? `dev <a href="https://solscan.io/account/${esc(r.dev)}" target="_blank" rel="noopener">${short(r.dev)} ↗</a> · seen launching live` : `dev lane: only for coins launched while this page is open`;
+  $("#runnerCard").innerHTML = `<div class="hd"><span># runner</span>${r.url ? `<a class="chip" href="${esc(r.url)}" target="_blank" rel="noopener">dexscreener ↗</a>` : `<span class="tag">preview</span>`}</div>
+    <div class="rsym">${tag(r.sym)}</div><div class="rname">${esc(r.name)}${r.born ? " · " + ago(now() - r.born) + " old" : ""}</div>
+    <div class="kv"><div><span>mcap</span>${usd(r.mcap)}</div><div><span>1h</span><b class="${updn(r.c1)}">${pct(r.c1, 1)}</b></div><div><span>vol 1h</span>${usd(r.v1)}</div></div>
+    <div class="dev">${dev}</div>`;
+  renderBasket(cur);
+  const rows = cur.betas.slice(0, 25), top = new Set(cur.basket.map(b => b.mint));
+  $("#betaTable").innerHTML = rows.length ? `<thead><tr><th>#</th><th>beta</th><th>lanes</th><th class="n hmm">mcap</th><th class="n hm">vol 1h</th><th class="n hm">5m</th><th class="n">headroom</th><th class="n hm">age</th><th class="n">score</th><th class="hm"></th></tr></thead><tbody>` +
+    rows.map((b, i) => `<tr class="${top.has(b.mint) ? "pick" : ""}"><td class="mut">${String(i + 1).padStart(2, "0")}</td><td><b class="${top.has(b.mint) ? "acc" : ""}">${tag(b.sym)}</b> <span class="nm">${esc(b.name)}</span></td><td>${laneTags(b.L)}</td>
+      <td class="n hmm">${usd(b.mcap)}</td><td class="n hm">${b.src === "stream" ? "fresh" : usd(b.v1)}</td><td class="n hm ${updn(b.c5)}">${b.src === "stream" ? "—" : pct(b.c5, 1)}</td>
+      <td class="n">${fx(b.gap)}</td><td class="n hm mut">${b.born ? ago(now() - b.born) : "—"}</td><td class="n"><b>${b.score}</b></td><td class="hm">${linkOf(b)}</td></tr>`).join("") + "</tbody>"
+    : `<tbody><tr><td class="empty">no betas found for $${esc(r.sym)} yet. fresh runners grow copies fast, try again in a minute.</td></tr></tbody>`;
+  const secs = (cur.ms / 1000).toFixed(1);
+  $("#mapStatus").innerHTML = `${cur.betas.length} betas · ${cur.qs.length} searches · ${secs}s${cur.skipped ? ` · ${cur.skipped} bigger coin${cur.skipped > 1 ? "s" : ""} skipped` : ""} · ${pv ? "preview data" : "live data"}`;
+  if (!pv) $("#stLast").textContent = secs + "s";
+  setMapLamp(pv ? "preview" : "live data", !pv);
+  $("#dlCard").disabled = false;
+  const t = `BETA mapped ${cur.betas.length} betas of $${r.sym}.` + (cur.basket.length ? `\nTop 3: ${cur.basket.map(b => "$" + b.sym).join(" ")}` : "") + `\n\nOwn the beta of every runner. $BETA` + (CONFIG.site ? "\n" + CONFIG.site : "");
+  $("#xShare").href = "https://x.com/intent/post?text=" + encodeURIComponent(t); $("#xShare").hidden = false;
+  const n = $("#mapNote"); n.hidden = !pv; if (pv) n.textContent = "dexscreener can't be reached from this preview, so this map is demo data. on the live site every number here is real.";
+}
+function renderBasket(cur) {
+  const bk = S.baskets.find(b => b.id === cur.basketId), el = $("#basketCard");
+  if (!cur.basket.length || !bk) { el.innerHTML = `<div class="hd"><span># basket · sim</span><span class="tag">empty</span></div><div class="empty">no beta passed the filters (headroom, flow, age), so nothing was bought. that's the point of the filters.</div>`; return; }
+  el.innerHTML = `<div class="hd"><span># basket · sim · ${hhmmss(bk.t)}</span><span class="chip ${bk.status === "open" ? "on" : ""}">${bk.status === "open" ? "open" : "closed"}</span></div>` +
+    bk.legs.map((l, i) => { const p = l.p0 ? l.p / l.p0 - 1 : 0; return `<div class="leg"><span class="mut">${String(i + 1).padStart(2, "0")}</span><span><b>${tag(l.sym)}</b><span class="sc">${l.lanes ? esc(l.lanes) + " · " : ""}${fx(l.gap)} headroom</span></span><span class="pnl"><b class="${updn(p)}">${pct(p)}</b><span class="sc">in ${price(l.p0)}</span></span></div>`; }).join("") +
+    `<div class="tot"><span class="mut">basket${bk.why ? " · " + esc(bk.why) : " · since fill"}</span><b class="${updn(bk.pnl)}">${pct(bk.pnl)}</b></div>
+     <div class="rules">paper fills at real prices${bk.preview ? " (preview: demo prices)" : ""}. exits: runner −25% from high · basket +60% · 30 min. updates every 20s.</div>`;
+}
+async function runMap(q, example = false) {
+  q = String(q || "").trim(); if (!q) return; const seq = ++mapSeq;
+  setMapLamp("mapping", false); $("#mapStatus").textContent = `mapping ${q.replace(/^\$/, "$")} · searching meme, ticker, theme, look, dev …`;
+  let cur;
+  try { cur = await mapRunner(q); }
+  catch (e) { if (seq !== mapSeq) return; if (dsOK === false) cur = previewMap(q); else { setMapLamp("not found", false); $("#mapStatus").textContent = `couldn't find "${q}". paste the ca instead.`; return; } }
+  if (seq !== mapSeq) return;
+  current = cur; cur.example = example; if (!cur.preview) watchRunner(cur.r);
+  const bk = openBasket(cur, example ? "example" : "you"); cur.basketId = bk?.id;
+  renderTool(cur, true);
+}
+$("#mapForm").addEventListener("submit", e => { e.preventDefault(); touched = true; runMap($("#q").value); });
+$$(".picks .chip[data-q]").forEach(b => b.onclick = () => { touched = true; $("#q").value = "$" + b.dataset.q; runMap(b.dataset.q); });
+addEventListener("resize", () => current ? paintMap(current, false) : idleMap());
+document.fonts.ready.then(() => current ? paintMap(current, false) : idleMap());
+idleMap();
+new IntersectionObserver((en, o) => { if (en[0].isIntersecting) { o.disconnect(); setTimeout(() => { if (!touched && !current) { $("#q").value = "$fartcoin"; runMap("fartcoin", true); } }, 300); } }, { rootMargin: "300px" }).observe($("#map"));
+
+// share card
+$("#dlCard").onclick = () => { if (!current) return; const W = 1200, H = 675, c = document.createElement("canvas"); c.width = W * 2; c.height = H * 2; const x = c.getContext("2d"); x.scale(2, 2);
+  const cur = current, mono = `"JetBrains Mono", ui-monospace, monospace`; x.fillStyle = T.bg; x.fillRect(0, 0, W, H);
+  x.save(); x.translate(W - 640, 35); drawMap(x, 605, cur, 1, T.bg); x.restore();
+  x.fillStyle = T.muted; x.font = `20px ${mono}`; x.fillText("anon@beta-desk ~ % beta map $" + cur.r.sym.toLowerCase(), 60, 92);
+  x.fillStyle = T.ink; x.font = `500 52px ${mono}`; x.fillText("betas of", 60, 170); x.fillText("$" + cur.r.sym.slice(0, 11), 60, 232);
+  x.fillStyle = T.muted; x.font = `18px ${mono}`; x.fillText(`${cur.betas.length} mapped · 5 lanes · ${(cur.ms / 1000).toFixed(1)}s`, 60, 278);
+  x.font = `15px ${mono}`; x.fillText("# basket · sim", 60, 340);
+  cur.basket.forEach((b, i) => { const y = 380 + i * 44; x.fillStyle = T.muted; x.font = `18px ${mono}`; x.fillText(String(i + 1).padStart(2, "0"), 60, y);
+    x.fillStyle = T.ink; x.font = `500 24px ${mono}`; x.fillText("$" + b.sym.slice(0, 12), 104, y); x.fillStyle = T.accent; x.font = `18px ${mono}`;
+    x.fillText(`${b.score}  ·  ${fx(b.gap)}`, 330, y); });
+  if (!cur.basket.length) { x.fillStyle = T.faint || T.muted; x.font = `18px ${mono}`; x.fillText("nothing passed the filters", 60, 380); }
+  x.fillStyle = T.line; x.fillRect(60, 560, 470, 1.5); x.fillStyle = T.ink; x.font = `500 20px ${mono}`; x.fillText("own the beta of every runner.", 60, 598);
+  x.fillStyle = T.muted; x.font = `14px ${mono}`; x.fillText(`$BETA · ${cur.preview ? "preview data" : "live data"} · sim fills · not financial advice`, 60, 628);
+  c.toBlob(bl => { const a = document.createElement("a"); a.href = URL.createObjectURL(bl); a.download = `beta-map-${cur.r.sym.toLowerCase()}.png`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }); };
+
+// ---------- paper baskets ----------
+let BID = 0;
+function openBasket(cur, src) {
+  if (!cur.basket.length) return null;
+  const b = { id: ++BID, src, preview: cur.preview, sym: cur.r.sym, n: cur.betas.length, t: now(), status: "open", why: "", pnl: 0,
+    runner: { mint: cur.r.mint, p: cur.r.price, hi: cur.r.price }, legs: cur.basket.map(x => ({ sym: x.sym, mint: x.mint, p0: x.price, p: x.price, score: x.score, gap: x.gap, lanes: laneNames(x.L) })) };
+  S.baskets.unshift(b); S.baskets.length = Math.min(S.baskets.length, 40); renderLedger(); counters(); return b;
+}
+async function pollBaskets() {
+  const open = S.baskets.filter(b => b.status === "open"); if (!open.length) return;
+  const mints = [...new Set(open.filter(b => !b.preview).flatMap(b => [b.runner.mint, ...b.legs.map(l => l.mint)]))], px = new Map();
+  if (mints.length) try { bestPairs(await tokens(mints)).forEach((p, k) => { if (+p.priceUsd) px.set(k, +p.priceUsd); }); } catch {}
+  for (const b of open) {
+    if (b.preview) { b.legs.forEach(l => l.p *= 1 + (Math.random() - .45) * .08); b.runner.p = (b.runner.p || 1) * (1 + (Math.random() - .5) * .04); }
+    else { b.legs.forEach(l => { if (px.has(l.mint)) l.p = px.get(l.mint); }); if (px.has(b.runner.mint)) b.runner.p = px.get(b.runner.mint); }
+    b.runner.hi = Math.max(b.runner.hi || 0, b.runner.p || 0);
+    b.pnl = b.legs.reduce((s, l) => s + (l.p0 ? l.p / l.p0 - 1 : 0), 0) / b.legs.length;
+    const why = b.pnl >= .6 ? "took +60%" : b.runner.p && b.runner.hi && b.runner.p < b.runner.hi * .75 ? "runner rolled −25%" : now() - b.t >= 30 * 60e3 ? "time · 30 min" : "";
+    if (why) { b.status = "closed"; b.why = why; }
+  }
+  renderLedger(); if (current) renderBasket(current);
+}
+setInterval(pollBaskets, 20000);
+function renderLedger() {
+  const rows = S.baskets.slice(0, 12);
+  $("#ledger").innerHTML = rows.length ? `<thead><tr><th>time</th><th>runner</th><th class="hm">betas</th><th>basket</th><th class="n">p&amp;l</th><th class="hm">status</th></tr></thead><tbody>` +
+    rows.map(b => `<tr><td class="mut">${hhmmss(b.t)}</td><td><b>${tag(b.sym)}</b> <span class="mut">${b.src === "auto" ? "breakout" : b.src}</span></td><td class="hm">${b.n}</td>
+      <td>${b.legs.map(l => tag(l.sym)).join(" ")}</td><td class="n"><b class="${updn(b.pnl)}">${pct(b.pnl)}</b></td><td class="hm ${b.status === "open" ? "acc" : "mut"}">${b.status}${b.why ? " · " + esc(b.why) : ""}${b.preview ? " · preview" : ""}</td></tr>`).join("") + "</tbody>"
+    : `<tbody><tr><td class="empty">baskets open here as breakouts land.</td></tr></tbody>`;
+  const done = S.baskets.length; $("#ledgerSum").innerHTML = done ? `avg <b class="${updn(avg())}">${pct(avg())}</b>` : "";
+}
+const avg = () => S.baskets.length ? S.baskets.reduce((s, b) => s + b.pnl, 0) / S.baskets.length : 0;
+
+// ---------- live: the pump.fun stream (one connection, reused) ----------
+function log(kind, html, mint) {
+  const cls = { break: "acc", map: "", beta: "acc", sim: "mut", new: "mut", watch: "mut" }[kind] ?? "mut", d = document.createElement("div");
+  const link = mint ? `<a href="https://pump.fun/coin/${esc(mint)}" target="_blank" rel="noopener">pump ↗</a>` : "<span></span>";
+  d.innerHTML = `<span class="t">${hhmmss()}</span><span class="${cls}">${kind}</span><span>${html}</span>${link}`;
+  const l = $("#log"); l.prepend(d); while (l.children.length > 16) l.lastChild.remove();
+  if (kind !== "new" && kind !== "watch") { S.events.unshift({ kind, html, t: now() }); S.events.length = Math.min(S.events.length, 12); clearTimeout(log.st); log.st = setTimeout(() => strip(), 3000); }
+}
+function onCreate(c) {
+  S.creates++; S.recent.push(c); S.byMint.set(c.mint, c); if (S.recent.length > 6000) S.byMint.delete(S.recent.shift().mint);
+  const b = fromStream(c); let hit = null;
+  for (const r of S.runners) { if (now() - r.at > 6 * 3600e3) continue; const L = lanesFor(r, b); if (L.ticker >= .85 || L.meme >= .6 || L.dev) { hit = { r, L }; break; } }
+  if (hit) { S.spawned++; hit.r.spawned++; log("beta", `${tag(b.sym)} spawned · rides ${tag(hit.r.sym)}${hit.L.dev ? " · same dev" : ""}`, c.mint); }
+  else if (now() - S.lastNew > 1600) { S.lastNew = now(); log("new", `${tag(b.sym)} <span class="mut">${esc(String(c.name).slice(0, 28))}</span>`, c.mint); }
+  counters();
+}
+const autoQ = []; let autoBusy = false;
+function onBreakout(mint, fake = false) {
+  S.grads++; const c = S.byMint.get(mint); S.lastBreak = { sym: c?.symbol, t: now() };
+  log("break", `${c ? tag(c.symbol) : short(mint)} graduated · mapping its betas`, mint); counters();
+  autoQ.push({ mint, c, fake }); if (autoQ.length > 3) autoQ.shift(); pump();
+}
+async function pump() {
+  if (autoBusy || !autoQ.length) return; autoBusy = true; const { mint, c, fake } = autoQ.shift();
+  try {
+    let cur = null;
+    if (fake) { await sleep(1200); cur = previewMap(c?.symbol || "runner"); }
+    else for (const wait of [1500, 6000, 15000]) { await sleep(wait); try { cur = await mapRunner(mint, 1500); break; } catch {} }
+    if (cur) { watchRunner(cur.r);
+      log("map", `${tag(cur.r.sym)} · ${cur.betas.length} betas mapped in ${(cur.ms / 1000).toFixed(1)}s`, cur.preview ? null : cur.r.mint);
+      const bk = openBasket(cur, "auto"); cur.basketId = bk?.id;
+      if (bk) log("sim", `basket ${bk.legs.map(l => tag(l.sym)).join(" ")} · paper fills`); else log("sim", `no beta passed the filters · nothing bought`);
+      addPick(cur); }
+  } finally { autoBusy = false; setTimeout(pump, 2500); }
+}
+const picks = [];
+function addPick(cur) {
+  picks.unshift({ q: cur.preview ? cur.r.sym : cur.r.mint, sym: cur.r.sym, cur }); picks.length = Math.min(picks.length, 5);
+  $("#pickLive").innerHTML = ""; $("#pickLive").classList.remove("mut");
+  picks.forEach((p, i) => { const b = document.createElement("button"); b.className = "chip" + (i === 0 ? " new" : ""); b.textContent = "$" + p.sym.toLowerCase().slice(0, 14);
+    b.onclick = () => { touched = true; $("#q").value = p.q; if (p.cur.preview) { mapSeq++; current = p.cur; renderTool(p.cur, true); } else runMap(p.q); }; $("#pickLive").append(b); });
+  if (!touched && (!current || current.example)) { mapSeq++; current = cur; renderTool(cur, true); }
+}
+let ws, wsTries = 0, pvTimer = null;
+function connect() {
+  let to;
+  try { ws = new WebSocket("wss://pumpportal.fun/api/data"); } catch { return startPreview(); }
+  to = setTimeout(() => { if (!S.live) startPreview(); }, 7000);
+  ws.onopen = () => { ws.send(JSON.stringify({ method: "subscribeNewToken" })); ws.send(JSON.stringify({ method: "subscribeMigration" })); };
+  ws.onmessage = m => { let d; try { d = JSON.parse(m.data); } catch { return; }
+    if (!S.live) { S.live = true; clearTimeout(to); stopPreview(); setLamp(); }
+    if (d.txType === "create" && d.mint) onCreate({ mint: d.mint, name: d.name || "", symbol: d.symbol || "", dev: d.traderPublicKey, mcSol: d.marketCapSol, t: now() });
+    else if (d.mint && (d.txType === "migrate" || d.txType === "migration" || d.pool === "pump-amm" || d.pool === "raydium")) onBreakout(d.mint); };
+  ws.onerror = () => {};
+  ws.onclose = () => { clearTimeout(to); S.live = false; setLamp(); wsTries++; if (wsTries >= 2) startPreview(); setTimeout(connect, Math.min(30000, 2500 * wsTries)); };
+}
+function setLamp() { const l = $("#lamp"); l.textContent = S.live ? "live · pump.fun" : S.preview ? "preview" : "connecting"; l.classList.toggle("live", S.live); }
+function startPreview() { // the stream can't be reached here: keep the page alive with clearly marked demo events
+  if (pvTimer || S.live) return; S.preview = true; setLamp(); const R = rng(7);
+  const syl = ["mo", "ka", "pu", "zo", "ri", "ba", "ne", "lu", "ta", "go", "fi", "do"], word = () => Array.from({ length: 2 + Math.floor(R() * 2) }, () => syl[Math.floor(R() * syl.length)]).join("");
+  const mint = () => Array.from({ length: 40 }, () => "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"[Math.floor(R() * 58)]).join("") + "pump";
+  let n = 0;
+  pvTimer = setInterval(() => { n++;
+    const r = S.runners[0], copy = r && R() < .22, w = copy ? (R() < .5 ? "baby" + r.sym.toLowerCase() : r.sym.toLowerCase() + ["2", "ceo", "inu", "cat"][Math.floor(R() * 4)]) : word();
+    onCreate({ mint: mint(), name: w, symbol: w.toUpperCase().slice(0, 10), dev: "pv" + n, mcSol: 28 + R() * 10, t: now() });
+    if (n % 22 === 5) { const m = mint(), s = word(); S.byMint.set(m, { mint: m, symbol: s.toUpperCase(), name: s }); onBreakout(m, true); }
+  }, 1300);
+}
+function stopPreview() { if (pvTimer) { clearInterval(pvTimer); pvTimer = null; } S.preview = false; }
+connect();
+log("watch", `listening to pump.fun for launches and graduations`);
+
+// ---------- counters, hero terminal, strip ----------
+function counters() {
+  $("#stCreates").textContent = S.creates.toLocaleString("en-US"); $("#stGrads").textContent = S.grads; $("#stSpawn").textContent = S.spawned; $("#stBaskets").textContent = S.baskets.length;
+}
+function mini() {
+  const st = S.live ? `<span class="ok">live</span> · pump.fun stream` : S.preview ? `<span class="mut">preview · demo events</span>` : `<span class="mut">connecting…</span>`;
+  const last = S.lastBreak ? `› ${tag(S.lastBreak.sym || "runner")} broke out ${ago(now() - S.lastBreak.t)} ago` : `› waiting for the next breakout`;
+  $("#mini").innerHTML = `<div><span class="mut">feed</span>  ${st}</div><div><span class="mut">launches</span>  ${S.creates.toLocaleString("en-US")}</div><div><span class="mut">breakouts</span> <span class="acc">${S.grads}</span>  <span class="mut">betas spawned</span> ${S.spawned}</div><div class="mut">${last}</div>`;
+}
+mini(); setInterval(mini, 1000);
+const EXPLAIN = ["a runner breaks out", "the money moves to its copies", "beta maps every copy in seconds", "the top 3 are bought first", "profit buys back $BETA"];
+let stripSig = "";
+function strip() {
+  const ev = S.events.filter(e => e.kind === "break" || e.kind === "beta").slice(0, 8).map(e => `<span><span class="acc">${e.kind}</span> ${e.html}</span>`);
+  const items = [...ev, ...EXPLAIN.map((s, i) => `<span><span class="mut">${String(i + 1).padStart(2, "0")}</span> ${esc(s)}</span>`)], sig = items.join("");
+  if (sig === stripSig) return; stripSig = sig; $("#strip").innerHTML = sig + sig;
+}
+strip(); setInterval(strip, 20000);
+renderLedger(); counters();
+
+// ---------- pinned steps ----------
+function steps() { const s = $("#how"), r = s.getBoundingClientRect(), span = r.height - innerHeight;
+  const p = span > 0 ? Math.min(1, Math.max(0, -r.top / span)) : 1, n = Math.min(5, Math.floor(p * 5.999));
+  $$("#steplist li").forEach((li, i) => li.classList.toggle("on", i < n));
+  $$("#stepterm .ln").forEach((li, i) => li.classList.toggle("on", i <= n)); $("#stepn").textContent = n; }
+addEventListener("scroll", steps, { passive: true }); steps();
+
+// ---------- top bar + active nav ----------
+const secs = $$("section.s");
+addEventListener("scroll", () => { $("#top").classList.toggle("solid", scrollY > 10);
+  const cur = secs.filter(s => s.getBoundingClientRect().top < innerHeight * .4).pop();
+  $$(".nav a").forEach(a => a.classList.toggle("on", !!cur && a.getAttribute("href") === "#" + cur.id)); }, { passive: true });
+</script>
+</body></html>

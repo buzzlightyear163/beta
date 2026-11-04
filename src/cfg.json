@@ -1,0 +1,23 @@
+{
+ "ticker": "$BETA",
+ "theme": "phosphor",
+ "user": "anon",
+ "host": "beta-desk",
+ "object": "beta",
+ "command": "own the beta",
+ "sub": "the second wave of every runner, bought first.",
+ "layout": "big",
+ "decor": [
+  "dots"
+ ],
+ "eyebrow": "breakout desk \u00b7 solana \u00b7 live",
+ "tag": "own the beta",
+ "launch": {
+  "cmd": "beta watch --live",
+  "lines": [
+   "breakout feed on",
+   "beta map on \u00b7 5 lanes",
+   "profit \u2192 buyback $BETA"
+  ]
+ }
+}
